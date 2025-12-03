@@ -1,6 +1,7 @@
 import express from "express";
 import transactionsRouter from "./routes/transactions.route";
-import { errorHandler } from "./middlewares/errorHandler"; // ← Import your error middleware
+import usersRouter from "./routes/users.route";
+import { errorHandler } from "./middlewares/errorHandler";
 
 export const createApp = () => {
   const app = express();
@@ -10,7 +11,7 @@ export const createApp = () => {
 
   //Routes
   app.use("/api/transactions", transactionsRouter);
-
+  app.use("/api/users", usersRouter);
   //Health check
 
   app.get("/health", (req, res) => {
