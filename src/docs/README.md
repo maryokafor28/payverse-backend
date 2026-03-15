@@ -2,13 +2,16 @@
 
 A distributed payments platform backend built with Node.js, Express, PostgreSQL, Redis, and WebSockets.
 
-## 🏗️ Technical Decisions
+##  Technical Decisions
 
 - **PostgreSQL** - For ACID compliance and strong data integrity in financial transactions
 - **WebSockets** - For real-time bi-directional transaction updates
 - **Redis** - For distributed caching across multiple server instances
 
-📄 **Full Trade-off Analysis:** https://docs.google.com/document/d/1WD4lgkRT2HhAQyxUZfD08WUeRF3LMQCx3gR40IiGOU4/edit?usp=sharing
+ **Full Trade-off Analysis:** https://docs.google.com/document/d/1WD4lgkRT2HhAQyxUZfD08WUeRF3LMQCx3gR40IiGOU4/edit?usp=sharing
+
+   **Postman Collection:** [https://documenter.getpostman.com/view/48798242/2sB3dPSVuu]
+
 
 ---
 
@@ -70,7 +73,6 @@ npm run dev
 
 - `ws://localhost:3001` - Real-time updates
 
-  **Postman Collection:** [Import `postman_collection.json`]
 
 ---
 
