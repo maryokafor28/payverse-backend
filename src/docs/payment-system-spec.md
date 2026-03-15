@@ -17,11 +17,45 @@ The platform enables users to:
 
 ---
 
-## 2. Security layer
+## 2. DATABASE LAYER
+
+The platform uses a hybrid database architecture.
+
+### 2.1 SQL Database
+
+Relational databases store financial data.
+Example tables: users, transactions, payments, accounts
+
+### Requirements:
+
+- ACID compliance :
+  -Atomicity → All or nothing
+  -Consistency → Database rules stay valid
+  -Isolation → Transactions don't interfere
+  -Durability → Data never disappears
+- strong consistency
+- transactional guarantees
+  - Why SQL: Financial operations must be atomic and reliable.
+
+    Financial transactions must follow ACID guarantees.
+
+### Payment flow:
+
+1. Begin transaction
+2. Verify account balance
+3. Debit sender
+4. Credit receiver
+5. Record transaction
+6. Commit transaction
+   If any step fails, the system performs a rollback.
+
+---
+
+## 3. Security layer
 
 Security is the highest priority in a payment system.
 
-## 2.1 HTTPS Encryption
+### 3.1 HTTPS Encryption
 
 All communication between client and server must use HTTPS.
 Benefits:
@@ -30,7 +64,7 @@ Benefits:
 - prevents man-in-the-middle attacks
 - protects authentication tokens
 
-## 2.2 Authentication
+### 3.2 Authentication
 
 Authentication will be implemented using JSON Web Tokens (JWT).
 JWT Structure — A JWT contains three parts: Header, Payload, Signature.
@@ -63,39 +97,6 @@ Token Strategy — Two token types will be used:
   ```
 
 ---
-
-## 3. DATABASE LAYER
-
-The platform uses a hybrid database architecture.
-
-## 3.1 SQL Database
-
-Relational databases store financial data.
-Example tables: users, transactions, payments, accounts
-
-### Requirements:
-
-- ACID compliance :
-  -Atomicity → All or nothing
-  -Consistency → Database rules stay valid
-  -Isolation → Transactions don't interfere
-  -Durability → Data never disappears
-- strong consistency
-- transactional guarantees
-  - Why SQL: Financial operations must be atomic and reliable.
-
-    Financial transactions must follow ACID guarantees.
-
-### Payment flow:
-
-1. Begin transaction
-2. Verify account balance
-3. Debit sender
-4. Credit receiver
-5. Record transaction
-6. Commit transaction
-
-## If any step fails, the system performs a rollback.
 
 ## 4. CORE BACKEND DESIGN
 
@@ -138,14 +139,51 @@ Endpoint Method Description
 /accounts/balance GET Check account balance
 /auth/register POST Register a new user
 /auth/login POST Login and receive tokens
-/auth/refresh POST Refresh access token 5. API Protection Layer
+/auth/refresh POST Refresh access token
 ```
 
 ---
 
-## 5. API PROTECTION LAYER
+## 5. PERFORMANCE LAYER — REDIS CACHE
 
-### 5.1 Rate Limiting
+Redis will be used to reduce database load.
+Use cases:
+
+- caching frequently accessed data
+- session storage
+- rate limiting counters : Redis tracks how many requests each user makes within a time window.
+
+```
+User makes request
+        ↓
+Redis checks counter for that user
+        ↓
+Counter < 100 → allow request → increment counter
+        ↓
+Counter = 100 → block request → return 429 Too Many Requests
+        ↓
+After 60 seconds → counter resets
+```
+
+- idempotency keys
+
+```
+
+API Request
+↓
+Redis Cache
+↓
+Database (if cache miss)
+
+```
+
+Benefits: faster response time, reduced database load.
+
+---
+
+## 6. API PROTECTION LAYER
+
+### 6.1 Rate Limiting
 
 Rate limiting prevents abuse of the API.
 Example policy: 100 requests per minute per user
@@ -153,7 +191,7 @@ Protects against: bots, brute force attacks, API abuse
 
 - Implementation: Redis-based rate limiting
 
-### 5.2 API Gateway
+### 6.2 API Gateway
 
 An API Gateway will sit in front of backend services.
 Responsibilities:
@@ -173,28 +211,6 @@ Backend Services
 
 ---
 
-## 6. PERFORMANCE LAYER — REDIS CACHE
-
-Redis will be used to reduce database load.
-Use cases:
-
-- caching frequently accessed data
-- session storage
-- rate limiting counters
-- idempotency keys
-
-```
-API Request
-   ↓
-Redis Cache
-   ↓
-Database (if cache miss)
-```
-
-Benefits: faster response time, reduced database load.
-
----
-
 ## 7. ASYNCHRONOUS PROCESSING
 
 Payment processing should avoid blocking requests. A message queue will handle background jobs.
@@ -202,6 +218,7 @@ Payment processing should avoid blocking requests. A message queue will handle b
 -Payment Flow:
 
 ```
+
 User → Payment Request
 ↓
 API Server
@@ -213,6 +230,7 @@ Payment Processor Service
 Database
 ↓
 Notification Service
+
 ```
 
 Benefits: retries, reliability, failure isolation, background processing.
@@ -230,7 +248,9 @@ Clients should receive live transaction updates.
 - failed payment notifications
 
 ```
+
 Server → SSE Stream → Client
+
 ```
 
 ---
@@ -282,7 +302,7 @@ Logs will be generated at multiple system layers:
   }
   ```
 
-### 9.2 REQUEST CORELATION
+### 9.2 REQUEST CORRELATION
 
 - Each request should have a Request ID that travels across all services so engineers can trace a payment end to end.
 
@@ -304,20 +324,20 @@ Logs will be generated at multiple system layers:
 
 ### 9.4 Log Storage
 
-```
+- Application Servers → Pino Logs (JSON) → Log Aggregation → Monitoring Dashboard
+  Examples of log platforms: Elastic Stack, Grafana, Datadog.
 
-Application Servers → Pino Logs (JSON) → Log Aggregation → Monitoring Dashboard
-Examples of log platforms: Elastic Stack, Grafana, Datadog.
-9.5 Security Logging
+### 9.5 Security Logging
+
 Sensitive events must be logged: failed login attempts, suspicious payment activity, rate limit violations, authentication failures.
-json
-{
-"level": "warn",
-"message": "Rate limit exceeded",
-"ip": "192.168.1.1",
-"endpoint": "/payments"
-}
 
+```json
+{
+  "level": "warn",
+  "message": "Rate limit exceeded",
+  "ip": "192.168.1.1",
+  "endpoint": "/payments"
+}
 ```
 
 ### 9.6 Performance Metrics
@@ -326,19 +346,19 @@ Logs will track: request latency, payment processing time, queue processing dela
 
 ---
 
-## 10. Scalability Layer
+## 10. SCALABILITY LAYER
 
 ### 10.1 Docker
 
 The application will be containerized using Docker.
 
-Benefits: consistent environments, easier deployment, portability.
+- Benefits: consistent environments, easier deployment, portability.
 
 ### 10.2 Kubernetes
 
 Kubernetes will orchestrate containers.
 
-Responsibilities: container scheduling, auto-scaling, service discovery, automatic restarts.
+- Responsibilities: container scheduling, auto-scaling, service discovery, automatic restarts.
 
 ### 10.3 Load Balancing
 
@@ -404,24 +424,17 @@ Pino Logs
 Log Aggregation
 ↓
 Monitoring Dashboard
+```
 
 ---
 
-13. Key System Properties
-    Property Implementation
-    Security HTTPS + JWT + secure refresh tokens
-    Reliability Idempotent payment processing
-    Consistency ACID transactions for financial data
-    Scalability Docker + Kubernetes + Load Balancing
-    Performance Redis caching + async processing
-    Observability Pino logging + centralized monitoring
+## 13. Key System Properties
 
-```
+### Property Implementation
 
-```
-
-```
-
-```
-
-```
+- Security HTTPS + JWT + secure refresh tokens
+- Reliability Idempotent payment processing
+- Consistency ACID transactions for financial data
+- Scalability Docker + Kubernetes + Load Balancing
+- Performance Redis caching + async processing
+- Observability Pino logging + centralized monitoring
